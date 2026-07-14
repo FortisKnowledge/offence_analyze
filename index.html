@@ -238,7 +238,7 @@ const RESULT_LABELS = {
   PM: 'パス失敗',
   COf: 'パスカウントリセット',
   HA: 'ヘッドアタック',
-  OL: 'オーバーライン（ライン違反）'
+  OL: 'オーバーライン'
 };
 const RESULT_COLORS = {
   AS: '#8FB3A6', AM: '#D6A689', PM: '#D8C58D', COf: '#9CB8CC', HA: '#BFADC7', OL: '#E07A8B'
@@ -940,7 +940,7 @@ function renderHome(){
     <h2>このチームについて</h2>
     <p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin:0;">
       これは「診断ツール」ではなく「振り返り支援ツール」です。試合で何が起きたかを客観的な数字で見て、
-      「なんでこうなったと思う？」をみんなで考えるためのものです。原因はここでは決めません。
+      「なんでこうなったと思う？」をみんなで考えるためのものです。
     </p>
   </div>`;
 
@@ -1102,7 +1102,7 @@ function renderMatchDetail(){
     html += `<div class="card">
       <h2>気になる場面</h2>
       <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
-        振り返りのきっかけになりそうな場面の一覧です。原因はここでは決めません。
+        振り返りのきっかけになりそうな場面の一覧です。
       </p>
       ${olSpots.length ? `
         <div class="section-title" style="margin-top:0;">オーバーライン（OL）が発生した場面</div>
@@ -1386,7 +1386,7 @@ function renderTrends(){
     html += `<div class="card">
       <h2>元外野ごとの傾向</h2>
       <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
-        試合開始時に外野だった選手ごとに、その試合全体で起きた事実の合計を集計したものです（選手個人のプレーの集計ではありません）。
+        試合開始時に元外野だった選手ごとに、その試合全体で起きた事実の合計を集計したものです（選手個人のプレーの集計ではありません）。
       </p>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;">
