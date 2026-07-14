@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#16171A">
+<title>ふりかえりノート</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22ふりかえりノート%22,%22short_name%22:%22ふりかえり%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%2316171A%22,%22theme_color%22:%22%2316171A%22}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#16171A;
+  --card:#222428;
+  --ink:#EAE7E2;
+  --ink-soft:#928F8A;
+  --line:#34363B;
+  --teal:#8FB3A6;
+  --teal-bg:#283330;
+  --teal-deep:#ABCFC1;
+  --coral:#D6A689;
+  --coral-bg:#332923;
+  --coral-deep:#E8C4AB;
+  --amber:#D8C58D;
+  --amber-bg:#332E20;
+  --amber-deep:#EBDBA8;
+  --blue:#9CB8CC;
+  --blue-bg:#242C34;
+  --blue-deep:#BBD3E5;
+  --purple:#BFADC7;
+  --purple-bg:#2D2832;
+  --purple-deep:#D6C7DD;
+  --radius:14px;
+  --radius-sm:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:40px;
+}
+.app{max-width:520px;margin:0 auto;padding:16px;}
+header.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 4px 16px;
+}
+header.topbar h1{
+  font-size:20px;font-weight:700;margin:0;letter-spacing:0.02em;
+  display:flex;align-items:center;gap:8px;
+}
+header.topbar h1 .dot{
+  width:10px;height:10px;border-radius:50%;background:var(--teal);display:inline-block;
+}
+.iconbtn{
+  border:none;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;color:var(--ink-soft);
+}
+.iconbtn:active{transform:scale(0.95);}
+.iconbtn.spin svg{animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Bottom nav */
+nav.bottomnav{
+  position:sticky;bottom:0;left:0;right:0;
+  display:flex;background:var(--card);border-top:1px solid var(--line);
+  max-width:520px;margin:24px auto 0;border-radius:var(--radius) var(--radius) 0 0;
+  overflow:hidden;
+}
+nav.bottomnav button{
+  flex:1;border:none;background:none;padding:12px 4px;font-size:12px;
+  color:var(--ink-soft);display:flex;flex-direction:column;align-items:center;gap:4px;
+  cursor:pointer;font-family:inherit;
+}
+nav.bottomnav button.active{color:var(--teal);font-weight:700;}
+nav.bottomnav button .icon{font-size:20px;}
+
+/* Cards */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px;margin-bottom:12px;
+}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:700;color:var(--ink);}
+.card h2 .sub{font-size:12px;color:var(--ink-soft);font-weight:400;margin-left:6px;}
+
+/* Match list */
+.match-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  margin-bottom:8px;background:var(--card);cursor:pointer;
+}
+.match-item:active{background:var(--bg);}
+.match-badge{
+  width:44px;height:44px;border-radius:10px;flex:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+}
+.badge-win{background:var(--teal-bg);color:var(--teal-deep);}
+.badge-lose{background:var(--coral-bg);color:var(--coral-deep);}
+.badge-draw{background:var(--amber-bg);color:var(--amber-deep);}
+.match-badge .score{font-size:11px;font-weight:400;}
+.match-info{flex:1;min-width:0;}
+.match-info .opp{font-weight:700;font-size:14px;}
+.match-info .meta{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+.tag{
+  display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;
+  background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);
+}
+
+/* Filter bar */
+.filterbar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
+.filterbar select{
+  font-size:13px;padding:8px 10px;border-radius:99px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);flex:none;
+}
+
+/* Stats grid */
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat{
+  background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.stat .label{font-size:12px;color:var(--ink-soft);}
+.stat .value{font-size:22px;font-weight:700;}
+.stat.teal .value{color:var(--teal);}
+.stat.coral .value{color:var(--coral);}
+.stat.amber .value{color:var(--amber);}
+.stat.blue .value{color:var(--blue);}
+
+/* Result key chips */
+.resultkey{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--ink-soft);margin-top:8px;}
+.resultkey span{background:var(--bg);border-radius:6px;padding:2px 6px;}
+
+/* Sequence flow */
+.flow-row{
+  display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--line);
+  font-size:13px;overflow-x:auto;
+}
+.flow-row:last-child{border-bottom:none;}
+.flow-num{
+  flex:none;width:28px;height:28px;border-radius:50%;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--ink-soft);
+}
+.chip{
+  flex:none;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;
+}
+.chip-AS{background:var(--teal-bg);color:var(--teal-deep);}
+.chip-AM{background:var(--coral-bg);color:var(--coral-deep);}
+.chip-PM{background:var(--amber-bg);color:var(--amber-deep);}
+.chip-COf{background:var(--blue-bg);color:var(--blue-deep);}
+.chip-HA{background:var(--purple-bg);color:var(--purple-deep);}
+.chip-OL{background:var(--coral-bg);color:#E07A8B;border:1px solid #E07A8B;}
+.chip-pass{font-size:11px;color:var(--ink-soft);background:none;padding:2px 4px;}
+.arrow{color:var(--ink-soft);font-size:12px;flex:none;}
+
+/* Attack turn grouping (continuous COf chain) */
+.turn-group{
+  border:1px solid var(--blue);border-radius:var(--radius-sm);
+  margin:8px 0;overflow:hidden;background:var(--blue-bg);
+}
+.turn-group .flow-row{border-bottom:1px solid rgba(156,184,204,0.25);}
+.turn-group .flow-row:last-child{border-bottom:none;}
+.turn-group-label{
+  font-size:11px;color:var(--blue-deep);font-weight:700;padding:4px 10px;
+  display:flex;align-items:center;gap:4px;
+}
+.turn-single{}
+.turn-single .flow-row{border-bottom:1px solid var(--line);}
+
+/* Highlight list */
+.highlight-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:6px;
+  font-size:13px;
+}
+.highlight-item .off-no{font-weight:700;}
+.highlight-item .video-link{
+  font-size:12px;color:var(--ink-soft);border:1px solid var(--line);border-radius:8px;padding:4px 10px;
+}
+
+/* Empty/loading/error */
+.empty,.loading,.errorbox{
+  text-align:center;padding:40px 16px;color:var(--ink-soft);font-size:14px;
+}
+.errorbox{background:var(--coral-bg);color:var(--coral-deep);border-radius:var(--radius);}
+.spinner{
+  width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--teal);
+  border-radius:50%;margin:0 auto 12px;animation:spin 0.8s linear infinite;
+}
+
+/* Settings */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
+.field input{
+  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  font-size:14px;background:var(--bg);color:var(--ink);
+}
+.field .hint{font-size:11px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
+.btn{
+  width:100%;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--teal);
+  background:var(--teal);color:var(--bg);font-weight:700;font-size:14px;cursor:pointer;
+}
+.btn:active{transform:scale(0.99);}
+.btn-secondary{background:var(--card);color:var(--ink);border-color:var(--line);}
+
+/* small section title */
+.section-title{font-size:13px;font-weight:700;color:var(--ink-soft);margin:18px 0 8px;padding-left:2px;}
+
+/* legend */
+.legend-row{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--ink-soft);margin-bottom:6px;}
+.legend-row .sw{display:inline-flex;align-items:center;gap:4px;}
+.legend-row .sw i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+.chartwrap{position:relative;width:100%;height:220px;}
+.note{font-size:12px;color:var(--ink-soft);line-height:1.6;background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* =========================================================
+   ふりかえりノート - 試合振り返り支援アプリ (MVP)
+   - データソース: Google スプレッドシート (OffenseTime シート)
+   - 横持ち(offenseN/ResultN) -> 縦持ち変換
+   - 客観的事実のみを可視化。原因推定はしない。
+   ========================================================= */
+
+const STORAGE_KEY = 'fukikaeri_webapp_url_v1';
+const CACHE_KEY = 'fukikaeri_cache_v1';
+const SHEET_NAME = 'OffenseTime';
+
+const RESULT_LABELS = {
+  AS: 'アタック成功',
+  AM: 'アタック失敗',
+  PM: 'パス失敗',
+  COf: 'パスカウントリセット',
+  HA: 'ヘッドアタック',
+  OL: 'オーバーライン（ライン違反）'
+};
+const RESULT_COLORS = {
+  AS: '#8FB3A6', AM: '#D6A689', PM: '#D8C58D', COf: '#9CB8CC', HA: '#BFADC7', OL: '#E07A8B'
+};
+
+let state = {
+  view: 'home',          // home | matches | match | trends | settings
+  games: [],             // raw game rows (wide)
+  rows: [],              // long-format rows: {GameID, offense_no, pass_count, result, ...gameInfo}
+  warnings: [],
+  selectedGameId: null,
+  filters: { date:'', opponent:'', result:'', type:'', outfielder:'', cut:'' },
+  loading: false,
+  error: null,
+  lastUpdated: null
+};
+
+/* ---------------- Data loading ---------------- */
+
+function getWebAppUrl(){
+  return localStorage.getItem(STORAGE_KEY) || '';
+}
+function setWebAppUrl(url){
+  localStorage.setItem(STORAGE_KEY, url);
+}
+
+async function loadData(force){
+  state.loading = true;
+  state.error = null;
+  render();
+
+  const webAppUrl = getWebAppUrl();
+  if(!webAppUrl){
+    state.loading = false;
+    state.view = 'settings';
+    render();
+    return;
+  }
+
+  try{
+    const sep = webAppUrl.includes('?') ? '&' : '?';
+    const url = webAppUrl + sep + 'sheet=' + encodeURIComponent(SHEET_NAME) + (force ? ('&t=' + Date.now()) : '');
+    const res = await fetch(url, {cache: force ? 'no-store':'default'});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if(!json || !Array.isArray(json.table)) throw new Error('データ形式が想定と異なります（Apps Scriptの応答を確認してください）');
+    processSheet(json.table);
+    state.lastUpdated = new Date();
+    localStorage.setItem(CACHE_KEY, JSON.stringify({games:state.games, rows:state.rows, warnings:state.warnings, lastUpdated: state.lastUpdated.toISOString()}));
+  } catch(e){
+    // fall back to cache
+    const cached = localStorage.getItem(CACHE_KEY);
+    if(cached){
+      const c = JSON.parse(cached);
+      state.games = c.games; state.rows = c.rows; state.warnings = c.warnings || [];
+      state.lastUpdated = new Date(c.lastUpdated);
+      state.error = '最新データを取得できませんでした（前回のデータを表示中）: ' + e.message;
+    } else {
+      state.error = 'データを取得できませんでした: ' + e.message;
+    }
+  }
+  state.loading = false;
+  render();
+}
+
+function processSheet(table){
+  if(!table.length){ state.games=[]; state.rows=[]; return; }
+  const header = table[0].map(h => h.trim());
+  const dataRows = table.slice(1).filter(r => r.some(c => c.trim() !== ''));
+
+  const fixedCols = ['GameID','日付','相手チーム','自チーム得点','相手得点','勝敗','種別','元外野','Cut'];
+  const colIndex = {};
+  fixedCols.forEach(c => { colIndex[c] = header.indexOf(c); });
+
+  // find offenseN / ResultN pairs
+  const pairCols = [];
+  for(let n=1;n<=50;n++){
+    const oIdx = header.indexOf('offense'+n);
+    const rIdx = header.indexOf('Result'+n);
+    if(oIdx !== -1 || rIdx !== -1) pairCols.push({n, oIdx, rIdx});
+  }
+
+  const games = [];
+  const rows = [];
+  const warnings = [];
+
+  dataRows.forEach((r, rowIdx) => {
+    const get = (col) => {
+      const idx = colIndex[col];
+      return idx === -1 || idx === undefined ? '' : (r[idx] || '').trim();
+    };
+    const game = {
+      GameID: get('GameID'),
+      date: get('日付'),
+      opponent: get('相手チーム'),
+      myScore: get('自チーム得点'),
+      oppScore: get('相手得点'),
+      result: get('勝敗'),
+      type: get('種別'),
+      outfielder: get('元外野'),
+      cut: get('Cut') || '0'   // 0 / 1C / 2C / 3C / 4C
+    };
+    if(!game.GameID) return; // skip empty
+    games.push(game);
+
+    pairCols.forEach(({n, oIdx, rIdx}) => {
+      const offenseVal = oIdx === -1 ? '' : (r[oIdx] || '').trim();
+      const resultVal = rIdx === -1 ? '' : (r[rIdx] || '').trim();
+      if(offenseVal === '' && resultVal === '') return; // both empty -> ignore
+      if(offenseVal === '' || resultVal === ''){
+        warnings.push(`${game.GameID} offense${n}: offense/Result の片方が空欄です（行をスキップ）`);
+        return;
+      }
+      const passCount = parseInt(offenseVal, 10);
+      if(isNaN(passCount)){
+        warnings.push(`${game.GameID} offense${n}: パス回数が数値ではありません（"${offenseVal}"）`);
+        return;
+      }
+      if(passCount === 5) return; // ファイブパス（ファール）は表示対象外
+      if(!RESULT_LABELS[resultVal]){
+        warnings.push(`${game.GameID} Result${n}: 不明な結果コード "${resultVal}"`);
+      }
+      rows.push({
+        GameID: game.GameID,
+        offense_no: n,
+        pass_count: passCount,
+        result: resultVal,
+        date: game.date,
+        opponent: game.opponent,
+        gtype: game.type,
+        gresult: game.result,
+        outfielder: game.outfielder,
+        cut: game.cut
+      });
+    });
+  });
+
+  state.games = games;
+  state.rows = rows;
+  state.warnings = warnings;
+}
+
+/* ---------------- Helpers / Aggregations ---------------- */
+
+function gameResultClass(g){
+  if(g.result.includes('勝')) return 'badge-win';
+  if(g.result.includes('負')) return 'badge-lose';
+  return 'badge-draw';
+}
+
+// Cut列のパース：'0'→0, '1C'→1, '2C'→2 ...
+function parseCut(val){
+  if(!val || val === '0') return 0;
+  const m = String(val).match(/(\d+)C?/i);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+// カットマン表示ラベル
+function cutLabel(val){
+  const n = parseCut(val);
+  return n === 0 ? 'カットマンなし' : `カットマン${n}人`;
+}
+
+function splitOutfielders(str){
+  if(!str) return [];
+  return str.split(/[,、,\s\/・]+/).map(s=>s.trim()).filter(Boolean);
+}
+
+function filteredGames(){
+  return state.games.filter(g => {
+    if(state.filters.date && g.date !== state.filters.date) return false;
+    if(state.filters.opponent && g.opponent !== state.filters.opponent) return false;
+    if(state.filters.result && g.result !== state.filters.result) return false;
+    if(state.filters.type && g.type !== state.filters.type) return false;
+    if(state.filters.outfielder && !splitOutfielders(g.outfielder).includes(state.filters.outfielder)) return false;
+    if(state.filters.cut !== '' && (g.cut||'0') !== state.filters.cut) return false;
+    return true;
+  });
+}
+
+function uniqueValues(field){
+  const set = new Set();
+  state.games.forEach(g => { if(g[field]) set.add(g[field]); });
+  return Array.from(set);
+}
+
+function uniqueOutfielders(){
+  const set = new Set();
+  state.games.forEach(g => splitOutfielders(g.outfielder).forEach(n=>set.add(n)));
+  return Array.from(set).sort();
+}
+
+function uniqueCuts(){
+  // 実際にデータにある Cut 値を収集し、人数順にソート
+  const set = new Set();
+  state.games.forEach(g => set.add(g.cut || '0'));
+  return Array.from(set).sort((a,b) => parseCut(a) - parseCut(b));
+}
+
+function rowsForGame(gameId){
+  return state.rows.filter(r => r.GameID === gameId).sort((a,b)=>a.offense_no-b.offense_no);
+}
+
+// Build sequence with COf grouping info: for each row, what result follows it
+function buildSequenceWithFollowups(rows){
+  return rows.map((r, i) => ({
+    ...r,
+    next: rows[i+1] ? rows[i+1].result : null
+  }));
+}
+
+function countBy(rows, key){
+  const counts = {};
+  rows.forEach(r => { counts[r[key]] = (counts[r[key]]||0) + 1; });
+  return counts;
+}
+
+function gameSummary(gameId){
+  const rows = rowsForGame(gameId);
+  const seq = buildSequenceWithFollowups(rows);
+  const resultCounts = countBy(rows, 'result');
+
+  // COf followups
+  const cofFollow = {};
+  seq.forEach(r => {
+    if(r.result === 'COf' && r.next){
+      cofFollow[r.next] = (cofFollow[r.next]||0) + 1;
+    }
+  });
+  const cofTotal = resultCounts['COf'] || 0;
+
+  // forced attack at pass_count = 4
+  const forced4 = rows.filter(r => r.pass_count === 4).length;
+  const forced4Results = countBy(rows.filter(r => r.pass_count === 4), 'result');
+
+  // breakdown by pass_count -> result counts
+  const byPassCount = {};
+  rows.forEach(r => {
+    if(!byPassCount[r.pass_count]) byPassCount[r.pass_count] = {};
+    byPassCount[r.pass_count][r.result] = (byPassCount[r.pass_count][r.result]||0) + 1;
+  });
+
+  // "気になる場面": COf -> AM occurrences with offense_no
+  const cofToAmSpots = [];
+  seq.forEach(r => {
+    if(r.result === 'COf' && r.next === 'AM'){
+      cofToAmSpots.push(r.offense_no);
+    }
+  });
+
+  // low pass-count AM (pass_count 0-2, result AM)
+  const lowPassAm = rows.filter(r => r.pass_count <= 2 && r.result === 'AM').map(r => r.offense_no);
+
+  // オーバーライン（OL）発生場面：パス中・アタック中を問わずライン違反になった場面
+  const olSpots = rows.filter(r => r.result === 'OL').map(r => ({ offense_no: r.offense_no, pass_count: r.pass_count }));
+  const olTotal = resultCounts['OL'] || 0;
+
+  return {
+    rows, seq, resultCounts, cofFollow, cofTotal, forced4, forced4Results,
+    byPassCount, cofToAmSpots, lowPassAm, olSpots, olTotal
+  };
+}
+
+function teamTrendData(games){
+  return games.map(g => {
+    const s = gameSummary(g.GameID);
+    return { ...g, ...s };
+  });
+}
+
+/* ================================================================
+   分析エンジン
+   客観的な事実データをもとに、指導者が設定した評価基準に照らして
+   コメントを生成する。断定はせず「〜の傾向が見られます」で統一。
+   ================================================================ */
+
+/**
+ * 1試合分の分析を返す
+ * @param {object} s - gameSummary() の返り値
+ * @returns {object} { patterns, insights, trend }
+ */
+function analyzeGame(s, cut){
+  const { rows, seq, resultCounts, cofFollow, cofTotal, byPassCount } = s;
+  const total = rows.length;
+  if(total === 0) return null;
+  const cutNum = parseCut(cut);
+
+  // ── 攻撃パターン分類 ──────────────────────────────────────
+  // 「理想型」：COfが1回以上あった後にパス2〜4回でASになった攻撃
+  // ただし1試合内のoffense単位では前のCOfとの連続性が分かりにくいため、
+  // ここでは「AS かつ pass_count 2〜4 かつ その攻撃の前にCOfが存在する」で近似する
+
+  // seqでCOfから次の攻撃グループを抽出
+  let ideal = 0, passing = 0, lucky = 0;
+  let amHighPass = 0, amLowPass = 0;
+  let pm0 = 0, pmOther = 0;
+
+  // COf連続グループを構築：COfの後に続く最終結果を追跡
+  // COf → (COf →)* 終端 の形を連鎖として捕捉
+  const chains = []; // [{hasCof, finalResult, finalPassCount}]
+  let currentHasCof = false;
+  seq.forEach((r, i) => {
+    if(r.result === 'COf'){
+      currentHasCof = true;
+    } else {
+      chains.push({ hasCof: currentHasCof, finalResult: r.result, finalPassCount: r.pass_count });
+      currentHasCof = false;
+    }
+  });
+
+  chains.forEach(c => {
+    if(c.finalResult === 'AS'){
+      if(c.hasCof && c.finalPassCount >= 2 && c.finalPassCount <= 4) ideal++;
+      else if(!c.hasCof && c.finalPassCount >= 3) passing++;
+      else lucky++;  // パス0〜1 or COfなしで2以下
+    } else if(c.finalResult === 'AM'){
+      if(c.finalPassCount >= 3) amHighPass++;
+      else amLowPass++;
+    } else if(c.finalResult === 'PM'){
+      if(c.finalPassCount === 0) pm0++;
+      else pmOther++;
+    }
+  });
+
+  const asTotal = resultCounts.AS || 0;
+  const amTotal = resultCounts.AM || 0;
+  const pmTotal = resultCounts.PM || 0;
+
+  // ── COf活用率 ────────────────────────────────────────────
+  // COf後にASになった回数 / COf発生回数
+  const cofToAs = cofFollow.AS || 0;
+  const cofUtilRate = cofTotal > 0 ? Math.round(cofToAs / cofTotal * 100) : null;
+
+  // ── インサイト生成 ──────────────────────────────────────
+  const insights = [];
+
+  // 理想型
+  if(ideal > 0){
+    insights.push({
+      level: 'good',
+      title: `理想の攻撃パターン：${ideal}回`,
+      body: `「理想の攻撃パターン」とはCOf（パスカウントリセット）を使い、その後パスを2〜4回重ねてアタック成功（AS）した場面です。この試合では${ideal}回ありました。攻撃時間をうまく使えている場面です。`
+    });
+  }
+
+  // 及第点AS
+  if(passing > 0){
+    insights.push({
+      level: 'ok',
+      title: `及第点の攻撃：${passing}回`,
+      body: `COfなしでもパスを3〜4回重ねてからアタック成功した場面が${passing}回ありました。しっかりパスを積んでからのアタックができています。`
+    });
+  }
+
+  // ラッキーAS
+  if(lucky > 0){
+    insights.push({
+      level: 'note',
+      title: `早めのアタック成功：${lucky}回`,
+      body: `パス0〜2回でのアタック成功が${lucky}回ありました。アタックは成功しているので悪くはありませんが、相手の状況によるところが大きい場面です。`
+    });
+  }
+
+  // パス0回でのPM（最重要警告）
+  if(pm0 > 0){
+    insights.push({
+      level: 'warn',
+      title: `パス0回でのパスミス（PM）：${pm0}回`,
+      body: `相手のボールをキャッチした直後にパスミスになった場面が${pm0}回ありました。攻撃時間がほぼゼロになるため、チームとして最も改善が必要な場面です。なぜそうなったか、みんなで振り返ってみましょう。`
+    });
+  }
+
+  // 低パスAM
+  if(amLowPass > 0 && amTotal > 0){
+    const ratio = Math.round(amLowPass / amTotal * 100);
+    insights.push({
+      level: amLowPass >= 3 ? 'warn' : 'note',
+      title: `パス0〜1回でのアタック失敗：${amLowPass}回（AM全体の${ratio}%）`,
+      body: `パスをあまり積まずにアタックして失敗した場面が${amLowPass}回ありました。相手のディフェンスが整った状態でのアタックは通りにくい傾向があります。`
+    });
+  }
+
+  // 高パスAM（及第点）
+  if(amHighPass > 0){
+    insights.push({
+      level: 'ok',
+      title: `パスを積んでからのアタック失敗：${amHighPass}回`,
+      body: `パス3〜4回目でのアタック失敗が${amHighPass}回ありました。パスを積んでから攻めているので内容としては及第点です。アタックの精度を高めていくと更によくなります。`
+    });
+  }
+
+  // COf活用
+  if(cofTotal > 0 && cofUtilRate !== null){
+    if(cofUtilRate >= 40){
+      insights.push({
+        level: 'good',
+        title: `COf後のアタック成功率：${cofUtilRate}%`,
+        body: `パスカウントをリセット（COf）した後、${cofToAs}回ASに繋げることができました。COfを有効に活用できている場面が多かった試合です。`
+      });
+    } else if(cofTotal >= 3){
+      insights.push({
+        level: 'note',
+        title: `COf後のアタック成功：${cofToAs}回 / COf発生${cofTotal}回`,
+        body: `COfが${cofTotal}回発生しましたが、その後ASに繋がったのは${cofToAs}回でした。COfの後の展開をみんなで振り返ってみましょう。`
+      });
+    }
+  }
+
+  // オーバーライン（OL）：パス中・アタック中問わずライン違反になった場面
+  const olTotal = resultCounts.OL || 0;
+  if(olTotal > 0){
+    const olRatio = total > 0 ? Math.round(olTotal / total * 100) : 0;
+    insights.push({
+      level: olTotal >= 3 ? 'warn' : 'note',
+      title: `オーバーライン（OL）：${olTotal}回`,
+      body: `足が線を踏んでしまうオーバーラインが${olTotal}回ありました（全攻撃の${olRatio}%）。パス中・アタック中どちらでも起こりうる反則で、攻撃のテンポを崩す要因になります。どんな場面で起きやすいか振り返ってみましょう。`
+    });
+  }
+
+  // ── カットマンがいる相手との対戦分析 ──────────────────────
+  if(cutNum > 0){
+    const pmTotal = resultCounts.PM || 0;
+    const pmRate  = total > 0 ? Math.round(pmTotal / total * 100) : 0;
+    const pm0Rate = total > 0 ? Math.round(pm0 / total * 100) : 0;
+    const cofRate = total > 0 ? Math.round(cofTotal / total * 100) : 0;
+
+    // PMが多い場合
+    if(pmTotal >= 3){
+      insights.push({
+        level: pmRate >= 20 ? 'warn' : 'note',
+        title: `カットマン${cutNum}人の相手戦：PM ${pmTotal}回（全攻撃の${pmRate}%）`,
+        body: `カットマンが${cutNum}人いる相手との試合でパスミス（PM）が${pmTotal}回ありました。カットマンにパスカットされている場面が多かった可能性があります。パスのコース・タイミングの工夫が必要かもしれません。`
+      });
+    }
+
+    // COf発生率が高い場合
+    if(cofRate >= 20){
+      insights.push({
+        level: 'note',
+        title: `カットマン${cutNum}人の相手戦：COf ${cofTotal}回（全攻撃の${cofRate}%）`,
+        body: `カットマンがいる相手に対してパスカウントのリセット（COf）が多く発生しました。アタックタイミングを絞り込まれている可能性があります。`
+      });
+    }
+
+    // カットマン戦でのPM0（キャッチ直後のパスミス）が多い
+    if(pm0 >= 2){
+      insights.push({
+        level: 'warn',
+        title: `カットマン戦でのキャッチ直後パスミス（PM）：${pm0}回`,
+        body: `カットマンがいる相手戦で、ボールをキャッチした直後にパスミスになった場面が${pm0}回ありました。カットマンのプレッシャーで焦ってしまっているかもしれません。`
+      });
+    }
+  }
+
+  return { ideal, passing, lucky, amHighPass, amLowPass, pm0, pmOther, cofUtilRate, cofToAs, olTotal, cutNum, insights };
+}
+
+/**
+ * 複数試合の傾向分析を返す
+ * @param {Array} trend - teamTrendData() の返り値（時系列順）
+ * @returns {Array} insights の配列
+ */
+function analyzeTeamTrend(trend){
+  if(trend.length === 0) return [];
+  const insights = [];
+
+  // 全体集計
+  let totalIdeal=0, totalPassing=0, totalLucky=0;
+  let totalAmLow=0, totalAmHigh=0, totalPm0=0;
+  let totalCOf=0, totalCOfAs=0, totalAS=0, totalAM=0, totalPM=0, totalOL=0;
+  const analyses = trend.map(g => {
+    const a = analyzeGame(g, g.cut);
+    if(!a) return null;
+    totalIdeal   += a.ideal;
+    totalPassing += a.passing;
+    totalLucky   += a.lucky;
+    totalAmLow   += a.amLowPass;
+    totalAmHigh  += a.amHighPass;
+    totalPm0     += a.pm0;
+    totalCOf     += g.cofTotal || 0;
+    totalCOfAs   += g.cofFollow.AS || 0;
+    totalAS      += g.resultCounts.AS || 0;
+    totalAM      += g.resultCounts.AM || 0;
+    totalPM      += g.resultCounts.PM || 0;
+    totalOL      += g.resultCounts.OL || 0;
+    return a;
+  }).filter(Boolean);
+
+  const totalAttacks = totalIdeal + totalPassing + totalLucky + totalAmLow + totalAmHigh + totalPm0 + analyses.reduce((s,a) => s + a.pmOther, 0);
+  const totalAllOffenses = trend.reduce((s,g) => s + (g.rows ? g.rows.length : 0), 0);
+
+  // 理想型の割合
+  if(totalAS > 0){
+    const idealRatio = Math.round(totalIdeal / totalAS * 100);
+    const idealDef = '「理想の攻撃パターン」とは、COf（パスカウントリセット）を1回以上使い、その後パスを2〜4回重ねてアタック成功（AS）した場面のことです。';
+    insights.push({
+      level: idealRatio >= 40 ? 'good' : idealRatio >= 20 ? 'ok' : 'note',
+      title: `理想の攻撃パターン率：${idealRatio}%（${totalIdeal} / ${totalAS}AS）`,
+      body: idealDef + '　' + (idealRatio >= 40
+        ? `アタック成功のうち${idealRatio}%がこのパターンです。チームとして攻撃の組み立てができている傾向が見られます。`
+        : idealRatio >= 20
+        ? `アタック成功のうち${idealRatio}%がこのパターンです。COfを使いながらパスを積む形を意識するとさらに良くなります。`
+        : `アタック成功のうちこのパターンの割合がまだ低めです（${idealRatio}%）。COfを使ってからパスを積んでアタックする形を増やせると攻撃の質が上がります。`)
+    });
+  }
+
+  // PM0の深刻度
+  if(totalPm0 > 0 && totalAttacks > 0){
+    const pm0ratio = Math.round(totalPm0 / totalAttacks * 100);
+    insights.push({
+      level: pm0ratio >= 10 ? 'warn' : 'note',
+      title: `パス0回でのパスミス：全体の${pm0ratio}%（${totalPm0}回）`,
+      body: pm0ratio >= 10
+        ? `キャッチ直後のパスミスが全攻撃の${pm0ratio}%と多い傾向があります。攻撃時間をゼロにしてしまう一番もったいない場面です。チームで優先的に振り返りましょう。`
+        : `キャッチ直後のパスミスは${totalPm0}回（${pm0ratio}%）でした。少ないほどよい項目です。引き続き注意していきましょう。`
+    });
+  }
+
+  // 低パスAMの傾向
+  if(totalAM > 0){
+    const lowAmRatio = Math.round(totalAmLow / totalAM * 100);
+    insights.push({
+      level: lowAmRatio >= 50 ? 'warn' : lowAmRatio >= 30 ? 'note' : 'ok',
+      title: `アタック失敗のうちパス0〜1回が${lowAmRatio}%（${totalAmLow}回）`,
+      body: lowAmRatio >= 50
+        ? `アタック失敗の半数以上がパスをあまり積まない段階での失敗です。もう少しパスを重ねてからアタックすると成功率が上がるかもしれません。`
+        : lowAmRatio >= 30
+        ? `アタック失敗の${lowAmRatio}%がパス0〜1回での失敗です。パスを積む余裕がある場面では少しためてからアタックしてみましょう。`
+        : `アタック失敗のうちパス0〜1回のものは${lowAmRatio}%でした。パスを積んでからのアタックができている場面が多い傾向です。`
+    });
+  }
+
+  // COf活用の傾向
+  if(totalCOf > 0){
+    const cofRate = Math.round(totalCOfAs / totalCOf * 100);
+    insights.push({
+      level: cofRate >= 35 ? 'good' : cofRate >= 15 ? 'ok' : 'note',
+      title: `COf後のアタック成功率：${cofRate}%（${totalCOfAs} / ${totalCOf}回）`,
+      body: cofRate >= 35
+        ? `パスカウントをリセット（COf）した後にアタック成功できる確率が${cofRate}%です。COfを有効に使えているチームの傾向が見られます。`
+        : cofRate >= 15
+        ? `COf後のアタック成功率は${cofRate}%です。COfの後にどんな展開になっているか、試合ごとの振り返りで確認してみましょう。`
+        : `COf後のアタック成功率が${cofRate}%とまだ低めです。COfを出した後の動きをみんなで考えてみましょう。`
+    });
+  }
+
+  // オーバーライン（OL）の傾向
+  if(totalOL > 0){
+    const olRatio = totalAllOffenses > 0 ? Math.round(totalOL / totalAllOffenses * 100) : 0;
+    insights.push({
+      level: olRatio >= 10 ? 'warn' : 'note',
+      title: `オーバーライン（OL）率：${olRatio}%（${totalOL}回）`,
+      body: `足が線を踏んでしまうオーバーラインが全攻撃の${olRatio}%（${totalOL}回）発生しています。パス中・アタック中どちらでも起こる反則で、攻撃のテンポを崩す要因になります。発生しやすい場面の傾向がないか、チームで確認してみましょう。`
+    });
+  }
+
+  // 最近3試合 vs 全体の比較（5試合以上あるとき）
+  if(trend.length >= 5){
+    const recent = analyses.slice(-3);
+    const recentPm0 = recent.reduce((s,a)=>s+a.pm0,0);
+    const recentIdeal = recent.reduce((s,a)=>s+a.ideal,0);
+    const oldAnalyses = analyses.slice(0, -3);
+    const oldPm0 = oldAnalyses.reduce((s,a)=>s+a.pm0,0);
+    const oldIdeal = oldAnalyses.reduce((s,a)=>s+a.ideal,0);
+    const oldN = oldAnalyses.length;
+
+    if(oldN > 0){
+      const recentPm0avg = recentPm0 / 3;
+      const oldPm0avg = oldPm0 / oldN;
+      if(oldPm0avg > 0 && recentPm0avg < oldPm0avg * 0.7){
+        insights.push({ level:'good', title:'最近3試合でキャッチ直後のPMが減っています',
+          body:`以前の平均${oldPm0avg.toFixed(1)}回/試合から最近3試合では${recentPm0avg.toFixed(1)}回/試合に減少しています。改善傾向が見られます。` });
+      } else if(recentPm0avg > oldPm0avg * 1.5 && recentPm0 >= 2){
+        insights.push({ level:'note', title:'最近3試合でキャッチ直後のPMが増えています',
+          body:`以前の平均${oldPm0avg.toFixed(1)}回/試合から最近3試合では${recentPm0avg.toFixed(1)}回/試合に増えています。チームで確認してみましょう。` });
+      }
+      const recentIdealAvg = recentIdeal / 3;
+      const oldIdealAvg = oldIdeal / oldN;
+      if(oldIdealAvg >= 0 && recentIdealAvg > oldIdealAvg * 1.3 && recentIdeal >= 2){
+        insights.push({ level:'good', title:'最近3試合で理想の攻撃パターンが増えています',
+          body:`理想パターンが以前の平均${oldIdealAvg.toFixed(1)}回から最近3試合では${recentIdealAvg.toFixed(1)}回/試合に増えています。攻撃の組み立てが良くなっています。` });
+      }
+    }
+  }
+
+  return insights;
+}
+
+/* ---- Insight card renderer ---- */
+function renderInsights(insights, title){
+  if(!insights || !insights.length) return '';
+  const LEVEL_STYLE = {
+    good: { border:'var(--teal)',  bg:'var(--teal-bg)',   icon:'✦', color:'var(--teal-deep)' },
+    ok:   { border:'var(--blue)',  bg:'var(--blue-bg)',   icon:'◎', color:'var(--blue-deep)' },
+    note: { border:'var(--amber)', bg:'var(--amber-bg)',  icon:'△', color:'var(--amber-deep)' },
+    warn: { border:'var(--coral)', bg:'var(--coral-bg)',  icon:'▲', color:'var(--coral-deep)' }
+  };
+  const LEVEL_LABEL = { good:'良い傾向', ok:'及第点', note:'確認したい', warn:'要振り返り' };
+  return `<div class="card">
+    <h2>${escapeHtml(title)}</h2>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${insights.map(ins => {
+        const st = LEVEL_STYLE[ins.level] || LEVEL_STYLE.note;
+        return `<div style="border-left:3px solid ${st.border};background:${st.bg};border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span style="color:${st.border};font-size:13px;">${st.icon}</span>
+            <span style="font-size:12px;font-weight:700;color:${st.color};">${LEVEL_LABEL[ins.level]}</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px;">${escapeHtml(ins.title)}</div>
+          <div style="font-size:12px;color:var(--ink-soft);line-height:1.7;">${escapeHtml(ins.body)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <p style="font-size:11px;color:var(--ink-soft);margin:10px 0 0;line-height:1.6;">
+      ※ このコメントはデータから自動生成されます。原因の断定ではなく、振り返りのきっかけとして使ってください。
+    </p>
+  </div>`;
+}
+
+/* ---------------- Rendering ---------------- */
+
+function render(){
+  const app = document.getElementById('app');
+  let html = '';
+
+  html += renderHeader();
+
+  if(state.loading && !state.games.length && state.view !== 'settings'){
+    html += `<div class="loading"><div class="spinner"></div>データを読み込んでいます…</div>`;
+    html += renderBottomNav();
+  } else if(state.error && !state.games.length && state.view !== 'settings'){
+    html += `<div class="errorbox">${escapeHtml(state.error)}</div>`;
+    html += `<div class="card">
+      <h2>データが読み込めません</h2>
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin:0 0 12px;">
+        Apps ScriptウェブアプリのURLが正しいか、デプロイ時のアクセス権が「全員」になっているか、シート名（${SHEET_NAME}）が正しいかをご確認ください。
+      </p>
+      <button class="btn" data-nav="settings">設定を開く</button>
+    </div>`;
+    html += renderBottomNav();
+  } else {
+    switch(state.view){
+      case 'home': html += renderHome(); break;
+      case 'matches': html += renderMatches(); break;
+      case 'match': html += renderMatchDetail(); break;
+      case 'trends': html += renderTrends(); break;
+      case 'settings': html += renderSettings(); break;
+      default: html += renderHome();
+    }
+    html += renderBottomNav();
+  }
+
+  app.innerHTML = html;
+  afterRender();
+}
+
+function renderHeader(){
+  const updated = state.lastUpdated ? formatDateTime(state.lastUpdated) : '未取得';
+  return `
+  <header class="topbar">
+    <h1><span class="dot"></span>ふりかえりノート</h1>
+    <button class="iconbtn ${state.loading?'spin':''}" id="refreshBtn" title="更新">
+      ${state.loading ? spinnerSvg() : refreshSvg()}
+    </button>
+  </header>
+  ${state.error ? `<div class="note" style="background:var(--coral-bg);color:var(--coral-deep);margin-bottom:12px;">${escapeHtml(state.error)}</div>` : ''}
+  `;
+}
+
+function refreshSvg(){
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`;
+}
+function spinnerSvg(){
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>`;
+}
+
+function renderBottomNav(){
+  const items = [
+    {id:'home', label:'ホーム', icon:homeSvg()},
+    {id:'matches', label:'試合振り返り', icon:listSvg()},
+    {id:'trends', label:'チーム傾向', icon:chartSvg()},
+    {id:'settings', label:'設定', icon:gearSvg()}
+  ];
+  return `<nav class="bottomnav">
+    ${items.map(it => `<button class="${(state.view===it.id || (it.id==='matches'&&state.view==='match'))?'active':''}" data-nav="${it.id}"><span class="icon">${it.icon}</span>${it.label}</button>`).join('')}
+  </nav>`;
+}
+function homeSvg(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`;}
+function listSvg(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="11" width="18" height="4" rx="1"/><rect x="3" y="18" width="18" height="2" rx="1"/></svg>`;}
+function chartSvg(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-6 4 3 5-8"/></svg>`;}
+function gearSvg(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;}
+
+/* ---- HOME ---- */
+function renderHome(){
+  const total = state.games.length;
+  let html = '';
+
+  html += `<div class="card">
+    <h2>このチームについて</h2>
+    <p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin:0;">
+      これは「診断ツール」ではなく「振り返り支援ツール」です。試合で何が起きたかを客観的な数字で見て、
+      「なんでこうなったと思う？」をみんなで考えるためのものです。原因はここでは決めません。
+    </p>
+  </div>`;
+
+  html += `<div class="card">
+    <h2>メニュー</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn" data-nav="matches"><span style="display:flex;align-items:center;justify-content:center;gap:8px;">${listSvg()} 試合振り返り</span></button>
+      <button class="btn btn-secondary" data-nav="trends"><span style="display:flex;align-items:center;justify-content:center;gap:8px;">${chartSvg()} チーム傾向</span></button>
+    </div>
+  </div>`;
+
+  if(total){
+    const totalAS = state.rows.filter(r=>r.result==='AS').length;
+    const totalAM = state.rows.filter(r=>r.result==='AM').length;
+    const totalPM = state.rows.filter(r=>r.result==='PM').length;
+    html += `<div class="card">
+      <h2>全体サマリー<span class="sub">全 ${total} 試合</span></h2>
+      <div class="statgrid">
+        <div class="stat teal"><div class="label">アタック成功 (AS)</div><div class="value">${totalAS}</div></div>
+        <div class="stat coral"><div class="label">アタック失敗 (AM)</div><div class="value">${totalAM}</div></div>
+        <div class="stat amber"><div class="label">パス失敗 (PM)</div><div class="value">${totalPM}</div></div>
+        <div class="stat blue"><div class="label">試合数</div><div class="value">${total}</div></div>
+      </div>
+    </div>`;
+  }
+
+  if(state.warnings.length){
+    html += `<div class="card">
+      <h2>データの確認事項<span class="sub">${state.warnings.length}件</span></h2>
+      <div style="font-size:12px;color:var(--ink-soft);line-height:1.8;max-height:140px;overflow-y:auto;">
+        ${state.warnings.slice(0,30).map(w=>`<div>・${escapeHtml(w)}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+/* ---- MATCHES LIST ---- */
+function renderMatches(){
+  const opponents = uniqueValues('opponent');
+  const results = uniqueValues('result');
+  const types = uniqueValues('type');
+  const outfielders = uniqueOutfielders();
+  const cuts = uniqueCuts();
+
+  let html = `<div class="filterbar">
+    <select id="f-date"><option value="">日付：すべて</option>${uniqueValues('date').sort().reverse().map(d=>`<option value="${escapeHtml(d)}" ${state.filters.date===d?'selected':''}>${escapeHtml(d)}</option>`).join('')}</select>
+    <select id="f-opponent"><option value="">相手：すべて</option>${opponents.map(o=>`<option value="${escapeHtml(o)}" ${state.filters.opponent===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select>
+    <select id="f-result"><option value="">勝敗：すべて</option>${results.map(r=>`<option value="${escapeHtml(r)}" ${state.filters.result===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}</select>
+    <select id="f-type"><option value="">種別：すべて</option>${types.map(t=>`<option value="${escapeHtml(t)}" ${state.filters.type===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select>
+    <select id="f-outfielder"><option value="">元外野：すべて</option>${outfielders.map(o=>`<option value="${escapeHtml(o)}" ${state.filters.outfielder===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select>
+    <select id="f-cut"><option value="">カットマン：すべて</option>${cuts.map(c=>`<option value="${escapeHtml(c)}" ${state.filters.cut===c?'selected':''}>${escapeHtml(cutLabel(c))}</option>`).join('')}</select>
+  </div>`;
+
+  const games = filteredGames().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+
+  if(!games.length){
+    html += `<div class="empty">該当する試合がありません</div>`;
+    return html;
+  }
+
+  html += games.map(g => {
+    const cls = gameResultClass(g);
+    return `<div class="match-item" data-open-game="${escapeHtml(g.GameID)}">
+      <div class="match-badge ${cls}">
+        <div>${escapeHtml(g.result || '-')}</div>
+        <div class="score">${escapeHtml(g.myScore)}-${escapeHtml(g.oppScore)}</div>
+      </div>
+      <div class="match-info">
+        <div class="opp">${escapeHtml(g.opponent || '相手未設定')}</div>
+        <div class="meta">${escapeHtml(g.date || '')} <span class="tag">${escapeHtml(g.type || '')}</span></div>
+        ${g.outfielder ? `<div class="meta">元外野: ${escapeHtml(g.outfielder)}</div>` : ''}
+        ${g.cut && g.cut !== '0' ? `<div class="meta" style="color:var(--coral);">相手: ${escapeHtml(cutLabel(g.cut))}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return html;
+}
+
+/* ---- MATCH DETAIL ---- */
+function renderMatchDetail(){
+  const game = state.games.find(g => g.GameID === state.selectedGameId);
+  if(!game){
+    return `<div class="empty">試合が選択されていません</div>`;
+  }
+  const s = gameSummary(game.GameID);
+  const { resultCounts, cofTotal, cofFollow, forced4, forced4Results, byPassCount, cofToAmSpots, lowPassAm, olSpots, olTotal, seq } = s;
+  const gameAnalysis = analyzeGame(s, game.cut);
+
+  let html = '';
+
+  html += `<div class="card">
+    <h2>${escapeHtml(game.date)} vs ${escapeHtml(game.opponent)}<span class="sub">${escapeHtml(game.type)}</span></h2>
+    ${game.outfielder ? `<p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px;">元外野: ${escapeHtml(game.outfielder)}</p>` : ''}
+    ${game.cut !== undefined ? `<p style="font-size:12px;color:${parseCut(game.cut)>0?'var(--coral)':'var(--ink-soft)'};margin:0 0 10px;">相手チーム: ${escapeHtml(cutLabel(game.cut))}</p>` : ''}
+    <div class="statgrid">
+      <div class="stat teal"><div class="label">アタック成功 (AS)</div><div class="value">${resultCounts.AS||0}</div></div>
+      <div class="stat coral"><div class="label">アタック失敗 (AM)</div><div class="value">${resultCounts.AM||0}</div></div>
+      <div class="stat amber"><div class="label">パス失敗 (PM)</div><div class="value">${resultCounts.PM||0}</div></div>
+      <div class="stat blue"><div class="label">COf 発生</div><div class="value">${cofTotal}</div></div>
+      ${olTotal ? `<div class="stat" style="grid-column:1 / -1;"><div class="label" style="color:${RESULT_COLORS.OL};">オーバーライン (OL)</div><div class="value" style="color:${RESULT_COLORS.OL};">${olTotal}</div></div>` : ''}
+    </div>
+    <div class="resultkey">
+      ${Object.entries(RESULT_LABELS).map(([k,v])=>`<span>${k} = ${v}</span>`).join('')}
+    </div>
+  </div>`;
+
+  if(gameAnalysis) html += renderInsights(gameAnalysis.insights, 'この試合の振り返りポイント');
+
+  // 4-count forced attack
+  html += `<div class="card">
+    <h2>4カウント強制アタック<span class="sub">合計 ${forced4} 回</span></h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
+      5回パスはファール（ファイブパス）になるため、4回目のパス後は必ずアタックする決まりです。
+    </p>
+    <div class="statgrid">
+      ${Object.entries(RESULT_LABELS).map(([k,v]) => forced4Results[k] ? `<div class="stat"><div class="label">${k} (${v})</div><div class="value">${forced4Results[k]}</div></div>` : '').join('')}
+    </div>
+    ${forced4 === 0 ? `<p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">この試合では4カウントの場面はありませんでした。</p>`:''}
+  </div>`;
+
+  // COf followups
+  html += `<div class="card">
+    <h2>COf（パスカウントリセット）後の流れ<span class="sub">COf 発生 ${cofTotal} 回</span></h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
+      COfは攻撃終了ではなく攻撃の継続です。COfの直後に何が起きたかの回数のみ示します。
+    </p>
+    <div class="statgrid">
+      ${Object.entries(RESULT_LABELS).map(([k,v]) => cofFollow[k] ? `<div class="stat"><div class="label">COf → ${k}</div><div class="value">${cofFollow[k]}</div></div>` : '').join('')}
+    </div>
+    ${cofTotal === 0 ? `<p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">この試合ではCOfは発生していません。</p>`:''}
+  </div>`;
+
+  // pass count breakdown table
+  const passCounts = Object.keys(byPassCount).map(n=>parseInt(n,10)).sort((a,b)=>a-b);
+  html += `<div class="card">
+    <h2>パス回数ごとの結果</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
+      何回パスした時点でどんな結果になったか（事実のみ）。0〜3パスは自由判断、4パスは強制アタックの場面です。
+    </p>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <tr style="border-bottom:1px solid var(--line);">
+        <th style="text-align:left;padding:6px 4px;color:var(--ink-soft);">パス数</th>
+        ${Object.keys(RESULT_LABELS).map(k=>`<th style="text-align:center;padding:6px 4px;color:var(--ink-soft);">${k}</th>`).join('')}
+      </tr>
+      ${passCounts.map(pc => `<tr style="border-bottom:1px solid var(--line);">
+        <td style="padding:6px 4px;font-weight:700;">${pc}${pc===4?' <span style="font-size:10px;color:var(--coral);">※強制</span>':''}</td>
+        ${Object.keys(RESULT_LABELS).map(k=>`<td style="text-align:center;padding:6px 4px;">${byPassCount[pc][k]||''}</td>`).join('')}
+      </tr>`).join('')}
+    </table>
+    </div>
+  </div>`;
+
+  // 気になる場面
+  if(cofToAmSpots.length || lowPassAm.length || olSpots.length){
+    html += `<div class="card">
+      <h2>気になる場面</h2>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
+        振り返りのきっかけになりそうな場面の一覧です。原因はここでは決めません。
+      </p>
+      ${olSpots.length ? `
+        <div class="section-title" style="margin-top:0;">オーバーライン（OL）が発生した場面</div>
+        ${olSpots.map(o=>`<div class="highlight-item"><span class="off-no">攻撃 #${o.offense_no}（パス${o.pass_count}回）</span><span class="video-link">動画（準備中）</span></div>`).join('')}
+      `:''}
+      ${cofToAmSpots.length ? `
+        <div class="section-title">COf → AM が発生した場面</div>
+        ${cofToAmSpots.map(n=>`<div class="highlight-item"><span class="off-no">攻撃 #${n}</span><span class="video-link">動画（準備中）</span></div>`).join('')}
+      `:''}
+      ${lowPassAm.length ? `
+        <div class="section-title">少ないパス（0〜2回）でアタック失敗した場面</div>
+        ${lowPassAm.map(n=>`<div class="highlight-item"><span class="off-no">攻撃 #${n}</span><span class="video-link">動画（準備中）</span></div>`).join('')}
+      `:''}
+    </div>`;
+  }
+
+  // 攻撃ターンのグループ化：COfが続く間は同じ攻撃が継続しているとみなし、
+  // COf以外（AS/AM/PM/HA/OL）が出たところでそのターンを区切る
+  const turns = [];
+  let currentTurn = [];
+  seq.forEach(r => {
+    currentTurn.push(r);
+    if(r.result !== 'COf'){
+      turns.push(currentTurn);
+      currentTurn = [];
+    }
+  });
+  if(currentTurn.length) turns.push(currentTurn); // 末尾がCOfのまま終わる場合（データ途中）
+
+  // sequence view
+  html += `<div class="card">
+    <h2>攻撃の流れ<span class="sub">全 ${seq.length} 回</span></h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      COfが続いている間は同じ攻撃が継続しています。枠で囲まれている部分は1つの攻撃ターンです。
+    </p>
+    <div class="legend-row">
+      ${Object.entries(RESULT_COLORS).map(([k,c])=>`<span class="sw"><i style="background:${c}"></i>${k}</span>`).join('')}
+    </div>
+    <div style="max-height:400px;overflow-y:auto;">
+      ${turns.map(turn => {
+        const rowsHtml = turn.map(r => `<div class="flow-row">
+          <div class="flow-num">#${r.offense_no}</div>
+          <span class="chip chip-pass">パス${r.pass_count}回</span>
+          <span class="arrow">→</span>
+          <span class="chip chip-${r.result}">${r.result}</span>
+        </div>`).join('');
+
+        if(turn.length > 1){
+          // COfを挟んだ一連の攻撃ターン：枠で囲み、COf回数を明示
+          const cofCount = turn.length - 1;
+          return `<div class="turn-group">
+            <div class="turn-group-label">攻撃継続中（COf ${cofCount}回）</div>
+            ${rowsHtml}
+          </div>`;
+        }
+        // 単発の攻撃（COfなしで即終了）
+        return `<div class="turn-single">${rowsHtml}</div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  html += `<button class="btn btn-secondary" data-nav="matches">← 試合一覧へ戻る</button>`;
+
+  return html;
+}
+
+/* ---- TRENDS ---- */
+function renderTrends(){
+  const games = filteredGames().slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!games.length){
+    return `<div class="empty">表示できる試合データがありません</div>` + renderMatchesFilterBar();
+  }
+
+  const trend = teamTrendData(games);
+
+  // ── 日付ごとに合計 ──────────────────────────────────────────
+  // byDate[date] = { byPassCount:{0:{AS,AM,PM,COf,HA}, 1:..}, cofFollow:{AS,AM,PM,COf}, cofTotal, resultCounts }
+  const byDate = {};
+  trend.forEach(g => {
+    const d = g.date || '不明';
+    if(!byDate[d]) byDate[d] = {
+      byPassCount: {},
+      cofFollow: {},
+      cofTotal: 0,
+      resultCounts: {AS:0, AM:0, PM:0, COf:0, HA:0, OL:0}
+    };
+    const entry = byDate[d];
+    // pass count breakdowns
+    Object.entries(g.byPassCount).forEach(([pc, res]) => {
+      if(!entry.byPassCount[pc]) entry.byPassCount[pc] = {AS:0, AM:0, PM:0, COf:0, HA:0, OL:0};
+      Object.entries(res).forEach(([r, c]) => { entry.byPassCount[pc][r] = (entry.byPassCount[pc][r]||0) + c; });
+    });
+    // cof follow
+    Object.entries(g.cofFollow).forEach(([r, c]) => {
+      entry.cofFollow[r] = (entry.cofFollow[r]||0) + c;
+    });
+    entry.cofTotal += g.cofTotal||0;
+    Object.entries(g.resultCounts).forEach(([r, c]) => {
+      entry.resultCounts[r] = (entry.resultCounts[r]||0) + c;
+    });
+  });
+
+  const dateLabels = Object.keys(byDate).sort();
+
+  // 日付ごとの全攻撃回数（割合計算の分母）
+  dateLabels.forEach(d => {
+    let total = 0;
+    Object.values(byDate[d].byPassCount).forEach(res => {
+      total += (res.AS||0)+(res.AM||0)+(res.PM||0)+(res.COf||0)+(res.HA||0)+(res.OL||0);
+    });
+    byDate[d].totalAttacks = total;
+  });
+
+  // collect all pass counts that appear
+  const allPassNums = Array.from(new Set(
+    dateLabels.flatMap(d => Object.keys(byDate[d].byPassCount).map(Number))
+  )).filter(n => n !== 5).sort((a,b)=>a-b);
+
+  // 割合に変換するヘルパー
+  const pct = (count, d) => {
+    const t = byDate[d].totalAttacks;
+    return t > 0 ? Math.round(count / t * 1000) / 10 : 0; // 小数1桁%
+  };
+
+  // パレット：パス数ごとに色を割り当て（ダーク背景で映える・色相を大きく変える）
+  const PASS_COLORS = ['#6EC6E8','#7DD9A0','#F0C060','#F08070','#C89AE0'];
+  const PASS_DASH   = [[], [6,4], [2,2], [4,2], [1,2]];
+
+  // グラフ1データ：パス数別・日付別 攻撃割合（%）
+  const passDatasets = allPassNums.map((pc, i) => ({
+    label: `パス${pc}回` + (pc===4 ? '（強制）' : ''),
+    data: dateLabels.map(d => {
+      const res = byDate[d].byPassCount[pc];
+      if(!res) return 0;
+      const cnt = (res.AS||0)+(res.AM||0)+(res.PM||0)+(res.COf||0)+(res.HA||0);
+      return pct(cnt, d);
+    }),
+    borderColor: PASS_COLORS[i % PASS_COLORS.length],
+    backgroundColor: PASS_COLORS[i % PASS_COLORS.length],
+    borderDash: PASS_DASH[i % PASS_DASH.length],
+    tension: 0.2, pointRadius: 4
+  }));
+
+  // グラフ2データ：パス数別・日付別 AS割合（%）
+  const passAsDatasets = allPassNums.map((pc, i) => ({
+    label: `パス${pc}回` + (pc===4 ? '（強制）' : ''),
+    data: dateLabels.map(d => pct((byDate[d].byPassCount[pc]||{}).AS||0, d)),
+    borderColor: PASS_COLORS[i % PASS_COLORS.length],
+    backgroundColor: PASS_COLORS[i % PASS_COLORS.length],
+    borderDash: PASS_DASH[i % PASS_DASH.length],
+    tension: 0.2, pointRadius: 4
+  }));
+
+  // グラフ3データ：パス数別・日付別 AM割合（%）
+  const passAmDatasets = allPassNums.map((pc, i) => ({
+    label: `パス${pc}回` + (pc===4 ? '（強制）' : ''),
+    data: dateLabels.map(d => pct((byDate[d].byPassCount[pc]||{}).AM||0, d)),
+    borderColor: PASS_COLORS[i % PASS_COLORS.length],
+    backgroundColor: PASS_COLORS[i % PASS_COLORS.length],
+    borderDash: PASS_DASH[i % PASS_DASH.length],
+    tension: 0.2, pointRadius: 4
+  }));
+
+  // グラフ4データ：パス数別・日付別 PM割合（%）
+  const passPmDatasets = allPassNums.map((pc, i) => ({
+    label: `パス${pc}回` + (pc===4 ? '（強制）' : ''),
+    data: dateLabels.map(d => pct((byDate[d].byPassCount[pc]||{}).PM||0, d)),
+    borderColor: PASS_COLORS[i % PASS_COLORS.length],
+    backgroundColor: PASS_COLORS[i % PASS_COLORS.length],
+    borderDash: PASS_DASH[i % PASS_DASH.length],
+    tension: 0.2, pointRadius: 4
+  }));
+
+  // 全試合合計：パス数ごとの積み上げ棒グラフ用（byDate全体を集計）
+  const aggByPass = {};
+  dateLabels.forEach(d => {
+    Object.entries(byDate[d].byPassCount).forEach(([pc, res]) => {
+      if(!aggByPass[pc]) aggByPass[pc] = {AS:0, AM:0, PM:0, COf:0, HA:0};
+      Object.entries(res).forEach(([r, c]) => { aggByPass[pc][r] = (aggByPass[pc][r]||0) + c; });
+    });
+  });
+
+  let html = renderMatchesFilterBar();
+
+  // 凡例（パス数色）
+  const passLegend = allPassNums.map((pc, i) =>
+    `<span class="sw"><i style="background:${PASS_COLORS[i%PASS_COLORS.length]}"></i>パス${pc}回${pc===4?'（強制）':''}</span>`
+  ).join('');
+
+  html += `<div class="card">
+    <h2>日別 パス回数別 攻撃割合の推移</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      その日の全攻撃のうち、各パス回数が占める割合（%）。試合数の多い日・少ない日を公平に比較できます。
+    </p>
+    <div class="legend-row">${passLegend}</div>
+    <div class="chartwrap" style="height:240px;"><canvas id="passCountChart"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <h2>日別 パス回数別 アタック成功（AS）割合の推移</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      全攻撃に占めるASの割合をパス数別に表示。どのパス数でのASが増えているか変化が見えます。
+    </p>
+    <div class="legend-row">${passLegend}</div>
+    <div class="chartwrap" style="height:240px;"><canvas id="passAsChart"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <h2>日別 パス回数別 アタック失敗（AM）割合の推移</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      全攻撃に占めるAMの割合をパス数別に表示。成功グラフと並べて見ると傾向がつかめます。
+    </p>
+    <div class="legend-row">${passLegend}</div>
+    <div class="chartwrap" style="height:240px;"><canvas id="passAmChart"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <h2>日別 パス回数別 パスミス（PM）割合の推移</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      全攻撃に占めるPMの割合をパス数別に表示。特にパス0回のPMに注目してみてください。
+    </p>
+    <div class="legend-row">${passLegend}</div>
+    <div class="chartwrap" style="height:240px;"><canvas id="passPmChart"></canvas></div>
+  </div>`;
+
+  // COf → 次の結果の日別推移（割合・積み上げ棒）
+  const COF_FOLLOW_KEYS = ['AS','AM','PM','COf','OL'];
+  const COF_FOLLOW_COLORS = {AS:RESULT_COLORS.AS, AM:RESULT_COLORS.AM, PM:RESULT_COLORS.PM, COf:RESULT_COLORS.COf, OL:RESULT_COLORS.OL};
+  const cofFollowDatasets = COF_FOLLOW_KEYS.map(k => ({
+    label: `COf→${k}`,
+    data: dateLabels.map(d => pct(byDate[d].cofFollow[k]||0, d)),
+    backgroundColor: COF_FOLLOW_COLORS[k]
+  }));
+  const cofTotalData = dateLabels.map(d => pct(byDate[d].cofTotal||0, d));
+
+  html += `<div class="card">
+    <h2>日別 COf 発生とその後の結果（割合）</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      その日の全攻撃に占める割合（%）で表示。棒グラフの高さ = COfの直後に何が起きたか（積み上げ）。折れ線 = COf発生の割合。試合数の多い日・少ない日を公平に比較できます。
+    </p>
+    <div class="legend-row">
+      <span class="sw"><i style="background:var(--ink-soft)"></i>COf 発生（折れ線）</span>
+      ${COF_FOLLOW_KEYS.map(k=>`<span class="sw"><i style="background:${COF_FOLLOW_COLORS[k]}"></i>COf→${k}</span>`).join('')}
+    </div>
+    <div class="chartwrap" style="height:240px;"><canvas id="cofChart"></canvas></div>
+  </div>`;
+
+  // 全試合合計：パス回数ごとの結果（積み上げ棒）
+  const resultLegend = Object.keys(RESULT_LABELS).map(k =>
+    `<span class="sw"><i style="background:${RESULT_COLORS[k]}"></i>${k}（${RESULT_LABELS[k]}）</span>`
+  ).join('');
+  html += `<div class="card">
+    <h2>パス回数ごとの結果（全試合合計）</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+      横軸がパス回数、縦軸が件数。色の割合でAS/AM/PM/COfの比率が見えます。4回は強制アタックの場面。
+    </p>
+    <div class="legend-row">${resultLegend}</div>
+    <div class="chartwrap" style="height:260px;"><canvas id="passTotalChart"></canvas></div>
+  </div>`;
+
+  // 元外野ごとの集計
+  const outfielderAgg = {};
+  trend.forEach(g => {
+    splitOutfielders(g.outfielder).forEach(name => {
+      if(!outfielderAgg[name]) outfielderAgg[name] = {games:0, AS:0, AM:0, PM:0, COf:0, cofToAs:0, cofToAm:0, cofToPm:0, cofToCof:0};
+      const a = outfielderAgg[name];
+      a.games += 1;
+      a.AS += g.resultCounts.AS||0;
+      a.AM += g.resultCounts.AM||0;
+      a.PM += g.resultCounts.PM||0;
+      a.COf += g.cofTotal||0;
+      a.cofToAs += g.cofFollow.AS||0;
+      a.cofToAm += g.cofFollow.AM||0;
+      a.cofToPm += g.cofFollow.PM||0;
+      a.cofToCof += g.cofFollow.COf||0;
+    });
+  });
+  const outfielderNames = Object.keys(outfielderAgg).sort();
+
+  if(outfielderNames.length){
+    html += `<div class="card">
+      <h2>元外野ごとの傾向</h2>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
+        試合開始時に外野だった選手ごとに、その試合全体で起きた事実の合計を集計したものです（選手個人のプレーの集計ではありません）。
+      </p>
+      <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;">
+        <tr style="border-bottom:1px solid var(--line);">
+          <th style="text-align:left;padding:6px 8px;color:var(--ink-soft);">元外野</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">試合数</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">AS</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">AM</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">PM</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">COf</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">COf→AS</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">COf→AM</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">COf→PM</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">COf→COf</th>
+        </tr>
+        ${outfielderNames.map(name => {
+          const a = outfielderAgg[name];
+          return `<tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:6px 8px;font-weight:700;">${escapeHtml(name)}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.games}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.AS}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.AM}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.PM}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.COf}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.cofToAs}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.cofToAm}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.cofToPm}</td>
+            <td style="text-align:center;padding:6px 8px;">${a.cofToCof}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+      </div>
+    </div>`;
+  }
+
+  // チーム傾向分析
+  const teamInsights = analyzeTeamTrend(trend);
+  if(teamInsights.length) html += renderInsights(teamInsights, `チーム傾向の分析（${games.length}試合）`);
+
+  // ── カットマン別 比較 ──────────────────────────────────────
+  // 試合をカット人数ごとにグループ化して集計
+  const cutGroups = {}; // { '0': {games, AS, AM, PM, COf, OL, total, cofToAs}, '1C': {...}, ... }
+  trend.forEach(g => {
+    const key = g.cut || '0';
+    if(!cutGroups[key]) cutGroups[key] = {label:cutLabel(key), games:0, AS:0, AM:0, PM:0, COf:0, OL:0, total:0, cofToAs:0};
+    const c = cutGroups[key];
+    c.games++;
+    c.AS    += g.resultCounts.AS  || 0;
+    c.AM    += g.resultCounts.AM  || 0;
+    c.PM    += g.resultCounts.PM  || 0;
+    c.COf   += g.cofTotal         || 0;
+    c.OL    += g.resultCounts.OL  || 0;
+    c.cofToAs += g.cofFollow.AS   || 0;
+    c.total += g.rows ? g.rows.length : 0;
+  });
+
+  const cutKeys = Object.keys(cutGroups).sort((a,b)=>parseCut(a)-parseCut(b));
+  const pctStr = (n, d) => d > 0 ? Math.round(n/d*100) + '%' : '-';
+
+  if(cutKeys.length > 1){
+    // カットマン別比較インサイトを生成してチーム傾向分析の後に挿入
+    const cutInsights = [];
+    const noCut = cutGroups['0'];
+    cutKeys.filter(k => k !== '0').forEach(k => {
+      const c = cutGroups[k];
+      if(!c || c.games < 2) return; // 2試合以上あるときのみ比較
+      const pmRateC  = c.total  > 0 ? Math.round(c.PM  / c.total  * 100) : 0;
+      const pmRateN  = noCut && noCut.total > 0 ? Math.round(noCut.PM / noCut.total * 100) : null;
+      const cofRateC = c.total  > 0 ? Math.round(c.COf / c.total  * 100) : 0;
+      const cofRateN = noCut && noCut.total > 0 ? Math.round(noCut.COf / noCut.total * 100) : null;
+      const asRateC  = c.total  > 0 ? Math.round(c.AS  / c.total  * 100) : 0;
+      const asRateN  = noCut && noCut.total > 0 ? Math.round(noCut.AS / noCut.total * 100) : null;
+      const cofAsRateC = c.COf > 0 ? Math.round(c.cofToAs / c.COf * 100) : null;
+
+      // PMの差
+      if(pmRateN !== null && pmRateC > pmRateN + 5){
+        cutInsights.push({
+          level: pmRateC - pmRateN >= 15 ? 'warn' : 'note',
+          title: `${c.label}の相手戦でPMが増加（${pmRateC}% vs カットマンなし${pmRateN}%）`,
+          body: `カットマンが${parseCut(k)}人いる相手（${c.games}試合）では、パスミス率がカットマンなしの試合より${pmRateC-pmRateN}ポイント高い傾向があります。パスのコースやタイミングに注意が必要かもしれません。`
+        });
+      } else if(pmRateN !== null && pmRateC <= pmRateN){
+        cutInsights.push({
+          level: 'ok',
+          title: `${c.label}の相手戦でもPMは増えていない（${pmRateC}%）`,
+          body: `カットマンがいる相手との試合でも、パスミス率はカットマンなし（${pmRateN}%）と同程度か低めです。パスの工夫がうまく機能している傾向があります。`
+        });
+      }
+
+      // COf発生率の差
+      if(cofRateN !== null && cofRateC > cofRateN + 5){
+        cutInsights.push({
+          level: 'note',
+          title: `${c.label}の相手戦でCOfが多い（${cofRateC}% vs カットマンなし${cofRateN}%）`,
+          body: `カットマン相手ではパスカウントリセット（COf）の発生率が高い傾向があります。アタックタイミングが限定されていることが一因かもしれません。`
+        });
+      }
+
+      // COf後AS率
+      if(cofAsRateC !== null){
+        cutInsights.push({
+          level: cofAsRateC >= 30 ? 'good' : 'note',
+          title: `${c.label}の相手戦：COf後のアタック成功率${cofAsRateC}%`,
+          body: cofAsRateC >= 30
+            ? `カットマン相手でもCOf後にアタック成功できる確率が${cofAsRateC}%です。パスカウントをリセットしながら相手を崩せている傾向があります。`
+            : `カットマン相手ではCOf後のアタック成功率が${cofAsRateC}%にとどまっています。COf後の展開をチームで振り返ってみましょう。`
+        });
+      }
+
+      // AS率の差
+      if(asRateN !== null && asRateC < asRateN - 5){
+        cutInsights.push({
+          level: 'note',
+          title: `${c.label}の相手戦でアタック成功率が低下（${asRateC}% vs カットマンなし${asRateN}%）`,
+          body: `カットマンがいる相手ではアタック成功率が${asRateN-asRateC}ポイント低い傾向があります。カットマンの存在がアタックの難易度を上げている可能性があります。`
+        });
+      }
+    });
+
+    if(cutInsights.length){
+      html += renderInsights(cutInsights, 'カットマン別の傾向');
+    }
+
+    html += `<div class="card">
+      <h2>カットマン別 成績比較</h2>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;line-height:1.7;">
+        相手チームのカットマン人数ごとに、攻撃結果の割合を比較します。
+      </p>
+      <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;">
+        <tr style="border-bottom:1px solid var(--line);">
+          <th style="text-align:left;padding:6px 8px;color:var(--ink-soft);">相手</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">試合数</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--teal);">AS%</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--coral);">AM%</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--amber);">PM%</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--blue);">COf%</th>
+          <th style="text-align:center;padding:6px 8px;color:var(--ink-soft);">COf→AS%</th>
+          <th style="text-align:center;padding:6px 8px;color:#E07A8B;">OL%</th>
+        </tr>
+        ${cutKeys.map(k => {
+          const c = cutGroups[k];
+          return `<tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:6px 8px;font-weight:700;">${escapeHtml(c.label)}</td>
+            <td style="text-align:center;padding:6px 8px;">${c.games}</td>
+            <td style="text-align:center;padding:6px 8px;">${pctStr(c.AS, c.total)}</td>
+            <td style="text-align:center;padding:6px 8px;">${pctStr(c.AM, c.total)}</td>
+            <td style="text-align:center;padding:6px 8px;">${pctStr(c.PM, c.total)}</td>
+            <td style="text-align:center;padding:6px 8px;">${pctStr(c.COf, c.total)}</td>
+            <td style="text-align:center;padding:6px 8px;">${c.COf>0 ? pctStr(c.cofToAs, c.COf) : '-'}</td>
+            <td style="text-align:center;padding:6px 8px;">${pctStr(c.OL, c.total)}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+      </div>
+    </div>`;
+  }
+
+  // カットマン出現率サマリー（フィルターに関わらず全試合ベース）
+  {
+    const allGames = state.games;
+    const allTotal = allGames.length;
+    if(allTotal > 0){
+      const allCutCount = {};
+      allGames.forEach(g => {
+        const k = g.cut || '0';
+        allCutCount[k] = (allCutCount[k] || 0) + 1;
+      });
+      const withCut = allTotal - (allCutCount['0'] || 0);
+      const withPct = Math.round(withCut / allTotal * 100);
+      const noPct   = 100 - withPct;
+      const cutSortedKeys = Object.keys(allCutCount).sort((a,b)=>parseCut(a)-parseCut(b));
+
+      html += `<div class="card">
+        <h2>カットマン対戦率<span class="sub">全 ${allTotal} 試合（フィルター外含む）</span></h2>
+        <div class="statgrid" style="margin-bottom:12px;">
+          <div class="stat"><div class="label">カットマンあり</div><div class="value" style="color:var(--coral);">${withCut}試合</div></div>
+          <div class="stat"><div class="label">カットマンなし</div><div class="value">${allCutCount['0']||0}試合</div></div>
+          <div class="stat coral"><div class="label">カットマンあり率</div><div class="value">${withPct}%</div></div>
+          <div class="stat"><div class="label">カットマンなし率</div><div class="value">${noPct}%</div></div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <tr style="border-bottom:1px solid var(--line);">
+            <th style="text-align:left;padding:5px 8px;color:var(--ink-soft);">カットマン人数</th>
+            <th style="text-align:center;padding:5px 8px;color:var(--ink-soft);">試合数</th>
+            <th style="text-align:center;padding:5px 8px;color:var(--ink-soft);">全試合に占める割合</th>
+          </tr>
+          ${cutSortedKeys.map(k =>
+            '<tr style="border-bottom:1px solid var(--line);">' +
+            '<td style="padding:5px 8px;font-weight:700;">' + escapeHtml(cutLabel(k)) + '</td>' +
+            '<td style="text-align:center;padding:5px 8px;">' + allCutCount[k] + '</td>' +
+            '<td style="text-align:center;padding:5px 8px;">' + Math.round(allCutCount[k]/allTotal*100) + '%</td>' +
+            '</tr>'
+          ).join('')}
+        </table>
+        </div>
+      </div>`;
+    }
+  }
+
+  // 合計サマリー
+  const gameIds = new Set(games.map(g=>g.GameID));
+  const filtRows = state.rows.filter(r=>gameIds.has(r.GameID));
+  const totalAS = filtRows.filter(r=>r.result==='AS').length;
+  const totalAM = filtRows.filter(r=>r.result==='AM').length;
+  const totalPM = filtRows.filter(r=>r.result==='PM').length;
+  const totalCOf = filtRows.filter(r=>r.result==='COf').length;
+
+  html += `<div class="card">
+    <h2>選択中の ${games.length} 試合の合計</h2>
+    <div class="statgrid">
+      <div class="stat teal"><div class="label">AS 合計</div><div class="value">${totalAS}</div></div>
+      <div class="stat coral"><div class="label">AM 合計</div><div class="value">${totalAM}</div></div>
+      <div class="stat amber"><div class="label">PM 合計</div><div class="value">${totalPM}</div></div>
+      <div class="stat blue"><div class="label">COf 合計</div><div class="value">${totalCOf}</div></div>
+    </div>
+  </div>`;
+
+  window.__trendChartData = {
+    dateLabels, passDatasets, passAsDatasets, passAmDatasets, passPmDatasets,
+    cofFollowDatasets, cofTotalData,
+    allPassNums, aggByPass
+  };
+
+  return html;
+}
+
+function renderMatchesFilterBar(){
+  const opponents = uniqueValues('opponent');
+  const results = uniqueValues('result');
+  const types = uniqueValues('type');
+  const outfielders = uniqueOutfielders();
+  const cuts = uniqueCuts();
+  return `<div class="filterbar">
+    <select id="f-date"><option value="">日付：すべて</option>${uniqueValues('date').sort().reverse().map(d=>`<option value="${escapeHtml(d)}" ${state.filters.date===d?'selected':''}>${escapeHtml(d)}</option>`).join('')}</select>
+    <select id="f-opponent"><option value="">相手：すべて</option>${opponents.map(o=>`<option value="${escapeHtml(o)}" ${state.filters.opponent===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select>
+    <select id="f-result"><option value="">勝敗：すべて</option>${results.map(r=>`<option value="${escapeHtml(r)}" ${state.filters.result===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}</select>
+    <select id="f-type"><option value="">種別：すべて</option>${types.map(t=>`<option value="${escapeHtml(t)}" ${state.filters.type===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select>
+    <select id="f-outfielder"><option value="">元外野：すべて</option>${outfielders.map(o=>`<option value="${escapeHtml(o)}" ${state.filters.outfielder===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select>
+    <select id="f-cut"><option value="">カットマン：すべて</option>${cuts.map(c=>`<option value="${escapeHtml(c)}" ${state.filters.cut===c?'selected':''}>${escapeHtml(cutLabel(c))}</option>`).join('')}</select>
+  </div>`;
+}
+
+/* ---- SETTINGS ---- */
+function renderSettings(){
+  const webAppUrl = getWebAppUrl();
+  const appsScriptCode = `function doGet(e) {
+  var sheetName = (e.parameter.sheet) || '${SHEET_NAME}';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({error: 'シートが見つかりません: ' + sheetName}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  var values = sheet.getDataRange().getDisplayValues();
+  return ContentService.createTextOutput(JSON.stringify({table: values}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+  return `<div class="card">
+    <h2>データ連携設定</h2>
+    <p style="font-size:12px;color:var(--ink-soft);line-height:1.8;margin:0 0 12px;">
+      ブラウザからGoogleスプレッドシートに直接アクセスすると、ブラウザの制限（CORS）でデータを取得できません。
+      下の手順でGoogle Apps Scriptを使い、データをアプリが読める形で公開してください。
+    </p>
+    <div class="section-title" style="margin-top:0;">手順1：Apps Scriptを設定する</div>
+    <ol style="font-size:13px;color:var(--ink-soft);line-height:1.9;padding-left:20px;margin:0 0 10px;">
+      <li>対象のスプレッドシートを開く</li>
+      <li>メニューの「拡張機能」→「Apps Script」を開く</li>
+      <li>表示されたコードを下のコードに置き換える</li>
+      <li>「デプロイ」→「新しいデプロイ」→種類「ウェブアプリ」を選択</li>
+      <li>「アクセスできるユーザー」を「全員」に設定してデプロイ</li>
+      <li>表示されたウェブアプリのURL（<code>.../exec</code> で終わるもの）をコピー</li>
+    </ol>
+    <div style="position:relative;">
+      <textarea readonly id="appsScriptCode" style="width:100%;height:160px;font-family:monospace;font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;resize:vertical;">${escapeHtml(appsScriptCode)}</textarea>
+      <button class="btn btn-secondary" id="copyScriptBtn" style="margin-top:6px;">コードをコピー</button>
+    </div>
+
+    <div class="section-title">手順2：ウェブアプリのURLを入力</div>
+    <div class="field">
+      <label>Apps Script ウェブアプリ URL</label>
+      <input type="text" id="webAppUrlInput" value="${escapeHtml(webAppUrl)}" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="hint">
+        「${SHEET_NAME}」という名前のシート（タブ）を読み込みます。<br>
+        スプレッドシートを更新したあとは、アプリの更新ボタンで再取得できます。
+      </div>
+    </div>
+    <button class="btn" id="saveWebAppBtn">保存して読み込む</button>
+  </div>
+  ${state.games.length ? `<button class="btn btn-secondary" data-nav="home">← ホームに戻る</button>` : ''}
+  <div class="card">
+    <h2>このアプリについて</h2>
+    <p style="font-size:12px;color:var(--ink-soft);line-height:1.8;margin:0;">
+      このアプリは「診断ツール」ではなく「振り返り支援ツール」です。<br>
+      表示される情報は試合中に記録された客観的な事実（パス数・結果コード）のみで、
+      「焦り」「理解不足」などの原因を判定することはありません。<br>
+      子どもたち自身が「なんでこうなったと思う？」と考えるきっかけとして使ってください。
+    </p>
+  </div>`;
+}
+
+/* ---------------- Event wiring ---------------- */
+
+function afterRender(){
+  document.querySelectorAll('[data-nav]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.view = el.getAttribute('data-nav');
+      render();
+    });
+  });
+  document.querySelectorAll('[data-open-game]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.selectedGameId = el.getAttribute('data-open-game');
+      state.view = 'match';
+      render();
+    });
+  });
+  const refreshBtn = document.getElementById('refreshBtn');
+  if(refreshBtn) refreshBtn.addEventListener('click', () => loadData(true));
+
+  // filters
+  ['date','opponent','result','type','outfielder','cut'].forEach(key => {
+    const el = document.getElementById('f-'+key);
+    if(el){
+      el.addEventListener('change', () => {
+        state.filters[key] = el.value;
+        render();
+      });
+    }
+  });
+
+  // settings
+  const saveBtn = document.getElementById('saveWebAppBtn');
+  if(saveBtn){
+    saveBtn.addEventListener('click', () => {
+      const val = document.getElementById('webAppUrlInput').value.trim();
+      setWebAppUrl(val);
+      state.view = 'home';
+      loadData(true);
+    });
+  }
+  const copyBtn = document.getElementById('copyScriptBtn');
+  if(copyBtn){
+    copyBtn.addEventListener('click', () => {
+      const ta = document.getElementById('appsScriptCode');
+      ta.select();
+      try{
+        navigator.clipboard.writeText(ta.value);
+        copyBtn.textContent = 'コピーしました';
+        setTimeout(()=>{ copyBtn.textContent = 'コードをコピー'; }, 1500);
+      } catch(e){}
+    });
+  }
+
+  // charts (trends view)
+  if(state.view === 'trends' && window.__trendChartData){
+    renderCharts(window.__trendChartData);
+  }
+}
+
+function renderCharts(data){
+  // 破棄対象は新しいID群
+  ['passCountChart','passAsChart','passAmChart','passPmChart','passTotalChart','cofChart'].forEach(id => {
+    const c = window['__chart_' + id];
+    if(c) c.destroy();
+    delete window['__chart_' + id];
+  });
+
+  const gridColor = 'rgba(234,231,226,0.06)';
+  const tickColor = '#928F8A';
+  const lineAxisOpts = {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        color: tickColor,
+        callback: v => v + '%'
+      },
+      grid: {color: gridColor}
+    },
+    x: {ticks:{autoSkip:true, maxRotation:45, color:tickColor}, grid:{color:gridColor}}
+  };
+
+  function makeLineChart(id, datasets){
+    const ctx = document.getElementById(id);
+    if(!ctx) return;
+    window['__chart_' + id] = new Chart(ctx, {
+      type: 'line',
+      data: { labels: data.dateLabels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: lineAxisOpts
+      }
+    });
+  }
+
+  makeLineChart('passCountChart', data.passDatasets);
+  makeLineChart('passAsChart',    data.passAsDatasets);
+  makeLineChart('passAmChart',    data.passAmDatasets);
+  makeLineChart('passPmChart',    data.passPmDatasets);
+
+  // 全試合合計：パス回数ごとの結果（積み上げ棒）
+  const passTotalCtx = document.getElementById('passTotalChart');
+  if(passTotalCtx && data.allPassNums){
+    const passLabels = data.allPassNums.map(n => `パス${n}回` + (n===4?'（強制）':''));
+    window.__chart_passTotalChart = new Chart(passTotalCtx, {
+      type: 'bar',
+      data: {
+        labels: passLabels,
+        datasets: Object.keys(RESULT_LABELS).map(k => ({
+          label: k,
+          data: data.allPassNums.map(n => (data.aggByPass[n] && data.aggByPass[n][k]) || 0),
+          backgroundColor: RESULT_COLORS[k]
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { stacked:true, ticks:{color:tickColor}, grid:{color:gridColor} },
+          y: { stacked:true, beginAtZero:true, ticks:{precision:0, color:tickColor}, grid:{color:gridColor} }
+        }
+      }
+    });
+  }
+
+  // COf chart: mixed (stacked bar + line overlay)
+  const cofCtx = document.getElementById('cofChart');
+  if(cofCtx){
+    window.__chart_cofChart = new Chart(cofCtx, {
+      type: 'bar',
+      data: {
+        labels: data.dateLabels,
+        datasets: [
+          ...data.cofFollowDatasets,
+          {
+            type: 'line',
+            label: 'COf発生',
+            data: data.cofTotalData,
+            borderColor: '#EAE7E2',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#EAE7E2',
+            tension: 0.2,
+            order: 0  // draw on top
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {stacked: true, beginAtZero:true, ticks:{color:tickColor, callback: v => v + '%'}, grid:{color:gridColor}},
+          x: {stacked: true, ticks:{autoSkip:true, maxRotation:45, color:tickColor}, grid:{color:gridColor}}
+        }
+      }
+    });
+  }
+}
+
+/* ---------------- Utils ---------------- */
+function escapeHtml(str){
+  if(str === undefined || str === null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDateTime(d){
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* ---------------- Init ---------------- */
+
+// load cache first for instant display
+(function init(){
+  const cached = localStorage.getItem(CACHE_KEY);
+  if(cached){
+    try{
+      const c = JSON.parse(cached);
+      state.games = c.games; state.rows = c.rows; state.warnings = c.warnings || [];
+      state.lastUpdated = new Date(c.lastUpdated);
+    } catch(e){}
+  }
+  render();
+  loadData(false);
+})();
+</script>
+</body>
+</html>
