@@ -110,6 +110,15 @@ nav.bottomnav button .icon{font-size:20px;}
 }
 
 /* Filter bar */
+.modebar{display:flex;gap:6px;margin-bottom:12px;}
+.modebar button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:8px 4px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-soft);font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;
+}
+.modebar button .msub{font-size:10px;font-weight:400;}
+.modebar button.active{background:var(--teal-bg);border-color:var(--teal);color:var(--teal-deep);}
 .filterbar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
 .filterbar select{
   font-size:13px;padding:8px 10px;border-radius:99px;border:1px solid var(--line);
@@ -231,6 +240,15 @@ nav.bottomnav button .icon{font-size:20px;}
 const STORAGE_KEY = 'fukikaeri_webapp_url_v1';
 const CACHE_KEY = 'fukikaeri_cache_v1';
 const SHEET_NAME = 'OffenseTime';
+const MODE_KEY = 'fukikaeri_mode_v1';
+
+// 分析モード：GameID（A列）の先頭文字でカテゴリーを判定
+//   H… = オフィシャル（12人制） / G… = ジュニア（8人制） / 総合 = 全試合
+const MODES = {
+  all:      { label:'総合',         sub:'全試合' },
+  official: { label:'オフィシャル', sub:'12人制', prefix:'H' },
+  junior:   { label:'ジュニア',     sub:'8人制',  prefix:'G' }
+};
 
 const RESULT_LABELS = {
   AS: 'アタック成功',
@@ -253,7 +271,8 @@ let state = {
   filters: { date:'', opponent:'', result:'', type:'', outfielder:'', cut:'' },
   loading: false,
   error: null,
-  lastUpdated: null
+  lastUpdated: null,
+  mode: (function(){ try{ const m = localStorage.getItem('fukikaeri_mode_v1'); return MODES[m] ? m : 'all'; }catch(e){ return 'all'; } })()
 };
 
 /* ---------------- Data loading ---------------- */
@@ -342,6 +361,9 @@ function processSheet(table){
       cut: get('Cut') || '0'   // 0 / 1C / 2C / 3C / 4C
     };
     if(!game.GameID) return; // skip empty
+    if(gameCategory(game.GameID) === 'other'){
+      warnings.push(`${game.GameID}: GameIDが H / G で始まらないため、カテゴリー別（オフィシャル／ジュニア）には含まれません（総合には含まれます）`);
+    }
     games.push(game);
 
     pairCols.forEach(({n, oIdx, rIdx}) => {
@@ -407,8 +429,49 @@ function splitOutfielders(str){
   return str.split(/[,、,\s\/・]+/).map(s=>s.trim()).filter(Boolean);
 }
 
+// GameIDの先頭文字からカテゴリーを返す：'official'(H) / 'junior'(G) / 'other'
+function gameCategory(gameId){
+  const c = String(gameId || '').normalize('NFKC').trim().charAt(0).toUpperCase();
+  if(c === 'H') return 'official';
+  if(c === 'G') return 'junior';
+  return 'other';
+}
+function categoryTagLabel(gameId){
+  const c = gameCategory(gameId);
+  return c === 'official' ? 'オフィシャル(12人制)' : c === 'junior' ? 'ジュニア(8人制)' : '';
+}
+function inMode(gameId, mode){
+  mode = mode || state.mode;
+  if(mode === 'all') return true;          // 総合：全試合（H/G以外のIDも欠落させない）
+  return gameCategory(gameId) === mode;
+}
+// 現在の分析モードに該当する試合／攻撃データ（列構造・取得元は変更しない）
+function scopedGames(){
+  return state.games.filter(g => inMode(g.GameID));
+}
+function scopedRows(){
+  return state.rows.filter(r => inMode(r.GameID));
+}
+function modeGameCount(mode){
+  return state.games.filter(g => inMode(g.GameID, mode)).length;
+}
+function setMode(mode){
+  if(!MODES[mode] || state.mode === mode) return;
+  state.mode = mode;
+  try{ localStorage.setItem(MODE_KEY, mode); }catch(e){}
+  // モードを変えると選択肢が変わるため、絞り込みはリセット
+  state.filters = { date:'', opponent:'', result:'', type:'', outfielder:'', cut:'' };
+  state.selectedGameId = null;
+  if(state.view === 'match') state.view = 'matches';
+  render();
+}
+function modeLabel(){
+  const m = MODES[state.mode];
+  return state.mode === 'all' ? m.label : `${m.label}（${m.sub}）`;
+}
+
 function filteredGames(){
-  return state.games.filter(g => {
+  return scopedGames().filter(g => {
     if(state.filters.date && g.date !== state.filters.date) return false;
     if(state.filters.opponent && g.opponent !== state.filters.opponent) return false;
     if(state.filters.result && g.result !== state.filters.result) return false;
@@ -421,20 +484,20 @@ function filteredGames(){
 
 function uniqueValues(field){
   const set = new Set();
-  state.games.forEach(g => { if(g[field]) set.add(g[field]); });
+  scopedGames().forEach(g => { if(g[field]) set.add(g[field]); });
   return Array.from(set);
 }
 
 function uniqueOutfielders(){
   const set = new Set();
-  state.games.forEach(g => splitOutfielders(g.outfielder).forEach(n=>set.add(n)));
+  scopedGames().forEach(g => splitOutfielders(g.outfielder).forEach(n=>set.add(n)));
   return Array.from(set).sort();
 }
 
 function uniqueCuts(){
   // 実際にデータにある Cut 値を収集し、人数順にソート
   const set = new Set();
-  state.games.forEach(g => set.add(g.cut || '0'));
+  scopedGames().forEach(g => set.add(g.cut || '0'));
   return Array.from(set).sort((a,b) => parseCut(a) - parseCut(b));
 }
 
@@ -915,6 +978,12 @@ function render(){
 
 function renderHeader(){
   const updated = state.lastUpdated ? formatDateTime(state.lastUpdated) : '未取得';
+  const showModebar = state.games.length && state.view !== 'settings' && state.view !== 'match';
+  const modebar = showModebar ? `<div class="modebar">
+    ${Object.keys(MODES).map(k => `<button class="${state.mode===k?'active':''}" data-mode="${k}">
+      <span>${MODES[k].label}</span><span class="msub">${MODES[k].sub}・${modeGameCount(k)}試合</span>
+    </button>`).join('')}
+  </div>` : '';
   return `
   <header class="topbar">
     <h1><span class="dot"></span>ふりかえりノート</h1>
@@ -923,6 +992,7 @@ function renderHeader(){
     </button>
   </header>
   ${state.error ? `<div class="note" style="background:var(--coral-bg);color:var(--coral-deep);margin-bottom:12px;">${escapeHtml(state.error)}</div>` : ''}
+  ${modebar}
   `;
 }
 
@@ -951,7 +1021,7 @@ function gearSvg(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill=
 
 /* ---- HOME ---- */
 function renderHome(){
-  const total = state.games.length;
+  const total = scopedGames().length;
   let html = '';
 
   html += `<div class="card">
@@ -970,12 +1040,17 @@ function renderHome(){
     </div>
   </div>`;
 
+  if(!total && state.games.length){
+    html += `<div class="empty">${escapeHtml(modeLabel())}に該当する試合がありません</div>`;
+  }
+
   if(total){
-    const totalAS = state.rows.filter(r=>r.result==='AS').length;
-    const totalAM = state.rows.filter(r=>r.result==='AM').length;
-    const totalPM = state.rows.filter(r=>r.result==='PM').length;
+    const homeRows = scopedRows();
+    const totalAS = homeRows.filter(r=>r.result==='AS').length;
+    const totalAM = homeRows.filter(r=>r.result==='AM').length;
+    const totalPM = homeRows.filter(r=>r.result==='PM').length;
     html += `<div class="card">
-      <h2>全体サマリー<span class="sub">全 ${total} 試合</span></h2>
+      <h2>全体サマリー<span class="sub">${escapeHtml(modeLabel())} / 全 ${total} 試合</span></h2>
       <div class="statgrid">
         <div class="stat teal"><div class="label">アタック成功 (AS)</div><div class="value">${totalAS}</div></div>
         <div class="stat coral"><div class="label">アタック失敗 (AM)</div><div class="value">${totalAM}</div></div>
@@ -1030,7 +1105,7 @@ function renderMatches(){
       </div>
       <div class="match-info">
         <div class="opp">${escapeHtml(g.opponent || '相手未設定')}</div>
-        <div class="meta">${escapeHtml(g.date || '')} <span class="tag">${escapeHtml(g.type || '')}</span></div>
+        <div class="meta">${escapeHtml(g.date || '')} <span class="tag">${escapeHtml(g.type || '')}</span>${state.mode==='all' && categoryTagLabel(g.GameID) ? ` <span class="tag">${escapeHtml(categoryTagLabel(g.GameID))}</span>` : ''}</div>
         ${g.outfielder ? `<div class="meta">元外野: ${escapeHtml(g.outfielder)}</div>` : ''}
         ${g.cut && g.cut !== '0' ? `<div class="meta" style="color:var(--coral);">相手: ${escapeHtml(cutLabel(g.cut))}</div>` : ''}
       </div>
@@ -1572,9 +1647,9 @@ function renderTrends(){
     </div>`;
   }
 
-  // カットマン出現率サマリー（フィルターに関わらず全試合ベース）
+  // カットマン出現率サマリー（絞り込みフィルターに関わらず、選択中の分析モードの全試合ベース）
   {
-    const allGames = state.games;
+    const allGames = scopedGames();
     const allTotal = allGames.length;
     if(allTotal > 0){
       const allCutCount = {};
@@ -1805,6 +1880,9 @@ function afterRender(){
       state.view = 'match';
       render();
     });
+  });
+  document.querySelectorAll('[data-mode]').forEach(el => {
+    el.addEventListener('click', () => setMode(el.getAttribute('data-mode')));
   });
   const refreshBtn = document.getElementById('refreshBtn');
   if(refreshBtn) refreshBtn.addEventListener('click', () => loadData(true));
