@@ -1021,16 +1021,65 @@ function gearSvg(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill=
 
 /* ---- HOME ---- */
 function renderHome(){
-  const total = scopedGames().length;
+  const games = scopedGames();
+  const total = games.length;
   let html = '';
 
-  html += `<div class="card">
-    <h2>このチームについて</h2>
-    <p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin:0;">
-      これは「診断ツール」ではなく「振り返り支援ツール」です。試合で何が起きたかを客観的な数字で見て、
-      「なんでこうなったと思う？」をみんなで考えるためのものです。
-    </p>
-  </div>`;
+  if(total){
+    // 勝率は引き分けを分母から除外。接戦率・惜敗率はカットマン対戦分析と同じ定義で算出。
+    const getStats = list => {
+      const isWin = g => String(g.result||'').includes('勝');
+      const isLose = g => String(g.result||'').includes('負');
+      const isDraw = g => String(g.result||'').includes('分');
+      const scoreDiff = g => {
+        const my = parseInt(g.myScore, 10), opp = parseInt(g.oppScore, 10);
+        return Number.isNaN(my) || Number.isNaN(opp) ? null : my - opp;
+      };
+      const wins = list.filter(isWin).length;
+      const losses = list.filter(isLose).length;
+      const draws = list.filter(isDraw).length;
+      const decided = wins + losses;
+      const close = list.filter(g => {
+        if(isDraw(g)) return true;
+        const d = scoreDiff(g);
+        return d !== null && Math.abs(d) <= 2;
+      }).length;
+      const narrowLosses = list.filter(g => {
+        const d = scoreDiff(g);
+        return isLose(g) && d !== null && d >= -2 && d <= -1;
+      }).length;
+      return {
+        wins, losses, draws,
+        winPct: decided ? (wins / decided * 100).toFixed(1) : null,
+        closePct: list.length ? (close / list.length * 100).toFixed(1) : null,
+        narrowLossPct: list.length ? (narrowLosses / list.length * 100).toFixed(1) : null
+      };
+    };
+    const categories = [
+      {label:'全試合', games},
+      {label:'練習試合', games:games.filter(g => /練習/.test(String(g.type||'')))},
+      {label:'大会', games:games.filter(g => /大会|公式戦/.test(String(g.type||'')))}
+    ];
+    html += `<div class="card">
+      <h2>勝率・試合傾向<span class="sub">${escapeHtml(modeLabel())}</span></h2>
+      ${categories.map(cat => {
+        if(!cat.games.length) return `<div style="padding:8px 0 12px;border-bottom:1px solid var(--line);"><div class="section-title" style="margin:0 0 6px;">${cat.label}</div><div style="font-size:12px;color:var(--ink-soft);">該当する試合がありません</div></div>`;
+        const st = getStats(cat.games);
+        return `<div style="padding:8px 0 12px;border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px;">
+            <div style="font-size:13px;font-weight:700;">${cat.label}</div>
+            <div style="font-size:11px;color:var(--ink-soft);">${cat.games.length}試合 ・ ${st.wins}勝${st.losses}敗${st.draws}分</div>
+          </div>
+          <div class="statgrid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
+            <div class="stat teal" style="padding:8px;"><div class="label" style="font-size:10px;">勝率</div><div class="value" style="font-size:20px;">${st.winPct === null ? '-' : st.winPct+'%'}</div></div>
+            <div class="stat blue" style="padding:8px;"><div class="label" style="font-size:10px;">接戦率</div><div class="value" style="font-size:20px;">${st.closePct === null ? '-' : st.closePct+'%'}</div></div>
+            <div class="stat" style="padding:8px;"><div class="label" style="font-size:10px;">惜敗率</div><div class="value" style="font-size:20px;">${st.narrowLossPct === null ? '-' : st.narrowLossPct+'%'}</div></div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div style="font-size:10px;color:var(--ink-soft);line-height:1.6;margin-top:8px;">勝率は引き分けを除いて計算。接戦率は得点差2点以内（引き分けを含む）、惜敗率は1〜2点差負けの割合です。</div>
+    </div>`;
+  }
 
   html += `<div class="card">
     <h2>メニュー</h2>
